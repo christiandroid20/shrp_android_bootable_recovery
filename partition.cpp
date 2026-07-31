@@ -725,6 +725,13 @@ void TWPartition::Setup_Data_Partition(bool Display_Error) {
 					gui_err("mount_data_footer=Could not mount /data and unable to find crypto footer.");
 				}
 			} else {
+				// Metadata encryption (FBE) device: raw mount correctly fails
+				// because /data is block-level ciphertext until the
+				// dm-default-key layer is set up. Key_Directory being set is
+				// exactly the FBE signal -- mark it so, or the later decrypt
+				// step always falls back to legacy FDE (cryptfs_check_passwd),
+				// which crashes on FBE-only devices.
+				Set_FBE_Status();
 				Is_Encrypted = true;
 				Is_Decrypted = false;
 				if (datamedia)
