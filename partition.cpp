@@ -728,10 +728,15 @@ void TWPartition::Setup_Data_Partition(bool Display_Error) {
 				// Metadata encryption (FBE) device: raw mount correctly fails
 				// because /data is block-level ciphertext until the
 				// dm-default-key layer is set up. Key_Directory being set is
-				// exactly the FBE signal -- mark it so, or the later decrypt
-				// step always falls back to legacy FDE (cryptfs_check_passwd),
+				// exactly the FBE signal -- mark Is_FBE directly instead of
+				// calling Set_FBE_Status(), which ALSO sets
+				// DataManager TW_IS_DECRYPTED=1 (and never gets reset back),
+				// hiding the lock icon in Mount even though decrypt hasn't
+				// actually happened yet. Without Is_FBE=true here, the later
+				// decrypt step falls back to legacy FDE (cryptfs_check_passwd),
 				// which crashes on FBE-only devices.
-				Set_FBE_Status();
+				Is_FBE = true;
+				DataManager::SetValue(TW_IS_FBE, 1);
 				Is_Encrypted = true;
 				Is_Decrypted = false;
 				if (datamedia)
