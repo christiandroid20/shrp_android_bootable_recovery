@@ -627,6 +627,19 @@ void TWPartitionManager::Decrypt_Data() {
 					DataManager::SetValue(TW_IS_ENCRYPTED, 0);
 				} else {
 					gui_err("unable_to_decrypt=Unable to decrypt with default password.");
+					// Default password failed -- a real credential (pattern/PIN/
+					// password) is set. Unlike the legacy FDE branch below, this
+					// path never determined the real type, so tw_crypto_pwtype_0
+					// stayed at 0 and the UI always fell back to the generic
+					// password screen instead of routing to decrypt_pattern/
+					// decrypt_pin. Use the same synthetic-password-aware API
+					// Decrypt_FBE_DE() uses to find the real type.
+					string filename;
+					int pwd_type = android::keystore::Get_Password_Type(0, filename);
+					if (pwd_type < 0)
+						pwd_type = 0;
+					DataManager::SetValue(TW_CRYPTO_PWTYPE, pwd_type);
+					DataManager::SetValue("tw_crypto_pwtype_0", pwd_type);
 				}
 			}
 		} else {
