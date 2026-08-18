@@ -221,6 +221,17 @@ static inline std::string KM_Ver_From_Manifest(std::string ver) {
 	TWFunc::Get_Service_From_Manifest("/vendor", "android.hardware.keymaster", ver);
 	if (strstr(ver.c_str(), "4")) {
 		ver = "4.x";
+	} else if (ver.empty()) {
+		// Dispositivos modernos (solo KeyMint, sin el HIDL keymaster legacy)
+		// nunca van a declarar "android.hardware.keymaster" en su manifest,
+		// sin importar que blobs de vendor se usen -- es el nombre de
+		// interfaz equivocado, no un blob faltante. Revisar tambien el
+		// reemplazo AIDL moderno antes de darse por vencido.
+		std::string km_ver;
+		TWFunc::Get_Service_From_Manifest("/vendor", "android.hardware.security.keymint", km_ver);
+		if (!km_ver.empty()) {
+			ver = "keymint";
+		}
 	}
 	return ver;
 }
