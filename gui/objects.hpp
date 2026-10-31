@@ -371,6 +371,7 @@ protected:
 	int stopmtp(std::string arg);
 	int flashimage(std::string arg);
 	int gsiAnalyze(std::string arg);
+	int gsiFlashSystem(std::string arg);
 	int cancelbackup(std::string arg);
 	int checkpartitionlifetimewrites(std::string arg);
 	int mountsystemtoggle(std::string arg);
