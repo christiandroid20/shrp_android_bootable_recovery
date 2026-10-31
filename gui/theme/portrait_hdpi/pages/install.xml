@@ -439,7 +439,7 @@
 			</text>
 			<text style="pageSubTitle">
 				<placement x="%c_hawk_base_column%" y="%rPos12%"/>
-				<text>Select a system image for read-only inspection</text>
+				<text>Select a System image to inspect and preflight</text>
 			</text>
 			<fileselector>
 				<placement x="%c_hawk_base_column%" y="%rPos19%" w="%file_selector_default_w%" h="780"/>
@@ -499,7 +499,7 @@
 			</text>
 			<textbox>
 				<placement x="%c_hawk_base_column%" y="%rPos18%" w="%c_console_width%" h="760"/>
-				<text>WARNING: This writes the selected raw image over the current logical System partition in the active A/B slot. The previous System contents will be replaced. It does not resize or rewrite super metadata and does not format or write /data, userdata, metadata, vendor, product, odm, or the inactive slot. Only raw EROFS and EXT4 images are accepted; sparse images are blocked. The action will abort if /metadata cannot be checked or if an OTA snapshot/merge is pending.</text>
+				<text>WARNING: This writes the selected raw image over the current logical System partition in the active A/B slot. The previous System contents will be replaced. It does not resize or rewrite super metadata and does not format or write /data, userdata, metadata, vendor, product, odm, or the inactive slot. Only raw EROFS and EXT4 images are accepted; sparse images are blocked. The action checks only the filesystem signature, not the complete image integrity; use a trusted image and verify its checksum first. It aborts if /metadata cannot be checked or if an OTA snapshot/merge is pending.</text>
 			</textbox>
 			<text style="simpleText">
 				<placement x="%c_hawk_base_column%" y="%rPos68%"/>
