@@ -429,5 +429,54 @@
 				</actions>
 			</action>
 		</page>
+
+		<page name="gsi_manager">
+			<template name="navCommon"/>
+			<template name="c_status_bar"/>
+			<text style="pageTitle">
+				<placement x="%c_hawk_base_column%" y="%rPos3%"/>
+				<text>GSI Manager</text>
+			</text>
+			<text style="pageSubTitle">
+				<placement x="%c_hawk_base_column%" y="%rPos12%"/>
+				<text>Select a system image for read-only inspection</text>
+			</text>
+			<fileselector>
+				<placement x="%c_hawk_base_column%" y="%rPos19%" w="%file_selector_default_w%" h="780"/>
+				<filter folders="1" files="1" extn=".img" searchable="1"/>
+				<path name="gsi_image_path" default="/sdcard"/>
+				<data name="gsi_filename"/>
+				<selection name="gsi_file"/>
+				<search name="gsi_search"/>
+			</fileselector>
+			<text style="subOptionTitle">
+				<placement x="%c_hawk_base_column%" y="%rPos73%"/>
+				<text>Detected format: %gsi_format%</text>
+			</text>
+			<text style="simpleText">
+				<placement x="%c_hawk_base_column%" y="%rPos79%"/>
+				<text>Image size: %gsi_image_size%</text>
+			</text>
+			<textbox>
+				<placement x="%c_hawk_base_column%" y="%rPos85%" w="%c_console_width%" h="250"/>
+				<text>%gsi_analysis%</text>
+			</textbox>
+			<button>
+				<placement x="860" y="%rndPos105%"/>
+				<image resource="c_ok"/>
+				<actions>
+					<action function="gsiAnalyze"/>
+				</actions>
+			</button>
+			<action>
+				<touch key="home"/>
+				<action function="page">c_refresh</action>
+			</action>
+			<action>
+				<touch key="back"/>
+				<action function="page">advanced</action>
+			</action>
+		</page>
+
 	</pages>
 </recovery>
