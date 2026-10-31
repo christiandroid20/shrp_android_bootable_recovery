@@ -2162,7 +2162,7 @@ int GUIAction::gsiFlashSystem(std::string arg __unused)
 	systemPart->Backup_Method = originalBackupMethod;
 
 	if (flashed) {
-		gui_highlight("gsi_flash_done=Raw System image written to the active slot.");
+		DataManager::SetValue("gsi_analysis", "Raw System image write completed successfully to active slot " + active_slot + ". Verify the boot and ROM compatibility before adding GApps.");
 		op_status = 0;
 	} else {
 		gui_err("GSI Manager: the System image writer reported a failure.");
