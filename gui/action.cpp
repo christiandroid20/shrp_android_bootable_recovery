@@ -35,6 +35,7 @@
 #include <private/android_filesystem_config.h>
 #include <android-base/properties.h>
 #include <fstream>
+#include <libsnapshot/snapshot.h>
 
 #include <string>
 #include <sstream>
@@ -245,6 +246,7 @@ GUIAction::GUIAction(xml_node<>* node)
 		ADD_ACTION(changefilesystem);
 		ADD_ACTION(flashimage);
 		ADD_ACTION(gsiAnalyze);
+		ADD_ACTION(gsiFlashSystem);
 		ADD_ACTION(twcmd);
 		ADD_ACTION(setbootslot);
 		ADD_ACTION(installapp);
@@ -1924,6 +1926,8 @@ int GUIAction::flashimage(std::string arg __unused)
 int GUIAction::gsiAnalyze(std::string arg __unused)
 {
 	int op_status = 0;
+	bool raw_image_supported = false;
+	unsigned long long image_bytes = 0;
 	std::string path, filename;
 	DataManager::GetValue("gsi_image_path", path);
 	DataManager::GetValue("gsi_file", filename);
@@ -1932,6 +1936,7 @@ int GUIAction::gsiAnalyze(std::string arg __unused)
 	DataManager::SetValue("gsi_analysis", "Select a GSI .img file first.");
 	DataManager::SetValue("gsi_format", "Not analyzed");
 	DataManager::SetValue("gsi_image_size", "");
+	DataManager::SetValue("gsi_flash_ready", 0);
 
 	if (filename.empty()) {
 		DataManager::SetValue("gsi_analysis", "No image selected. Choose a .img file and analyze it again.");
@@ -1949,6 +1954,7 @@ int GUIAction::gsiAnalyze(std::string arg __unused)
 		} else {
 			image.seekg(0, std::ios::end);
 			std::streamoff image_size = image.tellg();
+			if (image_size > 0) image_bytes = static_cast<unsigned long long>(image_size);
 			image.seekg(0, std::ios::beg);
 			unsigned char header[1084] = {};
 			image.read(reinterpret_cast<char*>(header), sizeof(header));
@@ -1968,13 +1974,15 @@ int GUIAction::gsiAnalyze(std::string arg __unused)
 				header[1024] == 0xe2 && header[1025] == 0xe1 &&
 				header[1026] == 0xf5 && header[1027] == 0xe0) {
 				DataManager::SetValue("gsi_format", "EROFS (read-only filesystem)");
+				raw_image_supported = true;
 				DataManager::SetValue("gsi_analysis",
-					"Raw EROFS image detected. EROFS-to-EXT4 conversion is not enabled yet. No partitions were changed.");
+					"Raw EROFS image detected. Direct raw flashing is possible when the mapped System target is large enough. EROFS-to-EXT4 conversion is not enabled yet.");
 			} else if (bytes_read >= 1082 &&
 				header[1080] == 0x53 && header[1081] == 0xef) {
 				DataManager::SetValue("gsi_format", "EXT4");
+				raw_image_supported = true;
 				DataManager::SetValue("gsi_analysis",
-					"Raw EXT4 image detected. This screen only performs read-only identification; flashing is not enabled here.");
+					"Raw EXT4 image detected. Direct raw flashing is possible when the mapped System target is large enough.");
 			} else {
 				DataManager::SetValue("gsi_format", "Unknown / unsupported");
 				DataManager::SetValue("gsi_analysis",
@@ -2004,6 +2012,156 @@ int GUIAction::gsiAnalyze(std::string arg __unused)
 	}
 	DataManager::SetValue("gsi_target_info", targetInfo);
 
+	bool flash_ready = false;
+	if (raw_image_supported && image_bytes > 0 && systemPart != nullptr &&
+		systemPart->Is_Super && systemPart->Is_Present &&
+		!systemPart->Actual_Block_Device.empty() &&
+		systemPart->Actual_Block_Device.find("/dev/block/mapper/") == 0 &&
+		access(systemPart->Actual_Block_Device.c_str(), F_OK) == 0 &&
+		(systemPart->Get_Mount_Point() == "/system") &&
+		(systemPart->Size > 0) && image_bytes <= systemPart->Size &&
+		(PartitionManager.Get_Active_Slot_Display() == "A" ||
+		 PartitionManager.Get_Active_Slot_Display() == "B")) {
+		flash_ready = true;
+	} else if (raw_image_supported && systemPart != nullptr && image_bytes > systemPart->Size) {
+		DataManager::SetValue("gsi_analysis",
+			"Raw image is larger than the currently mapped System partition. Flashing is blocked; LP group capacity has not been changed.");
+	}
+	DataManager::SetValue("gsi_flash_ready", flash_ready ? 1 : 0);
+
+	operation_end(op_status);
+	return 0;
+}
+
+int GUIAction::gsiFlashSystem(std::string arg __unused)
+{
+	int op_status = 1;
+	std::string path, filename;
+	DataManager::GetValue("gsi_image_path", path);
+	DataManager::GetValue("gsi_file", filename);
+
+	operation_start("Flash GSI to System");
+	DataManager::SetValue("gsi_flash_ready", 0);
+
+	if (filename.empty() || path.empty()) {
+		gui_err("GSI Manager: select and analyze a System image first.");
+		operation_end(1);
+		return 0;
+	}
+
+	std::string full_path = path;
+	if (full_path.back() != '/') full_path += "/";
+	full_path += filename;
+
+	std::ifstream image(full_path.c_str(), std::ios::in | std::ios::binary);
+	if (!image.is_open()) {
+		gui_err("GSI Manager: the selected image cannot be opened.");
+		operation_end(1);
+		return 0;
+	}
+	image.seekg(0, std::ios::end);
+	std::streamoff image_size = image.tellg();
+	image.seekg(0, std::ios::beg);
+	unsigned char header[1084] = {};
+	image.read(reinterpret_cast<char*>(header), sizeof(header));
+	std::streamsize bytes_read = image.gcount();
+	image.close();
+
+	bool raw_erofs = bytes_read >= 1028 &&
+		header[1024] == 0xe2 && header[1025] == 0xe1 &&
+		header[1026] == 0xf5 && header[1027] == 0xe0;
+	bool raw_ext4 = bytes_read >= 1082 &&
+		header[1080] == 0x53 && header[1081] == 0xef;
+	bool sparse = bytes_read >= 4 &&
+		header[0] == 0x3a && header[1] == 0xff &&
+		header[2] == 0x26 && header[3] == 0xed;
+
+	if (image_size <= 0 || (!raw_erofs && !raw_ext4) || sparse) {
+		gui_err("GSI Manager: only verified raw EROFS or raw EXT4 images are enabled. Sparse, compressed, and unknown images are blocked.");
+		operation_end(1);
+		return 0;
+	}
+
+	TWPartition* systemPart = PartitionManager.Find_Partition_By_Path("/system");
+	if (systemPart == nullptr ||
+		!systemPart->Is_Super || !systemPart->Is_Present ||
+		systemPart->Get_Mount_Point() != "/system" ||
+		systemPart->Actual_Block_Device.find("/dev/block/mapper/") != 0 ||
+		access(systemPart->Actual_Block_Device.c_str(), F_OK) != 0) {
+		gui_err("GSI Manager: the active logical System mapper is not available. No write was attempted.");
+		operation_end(1);
+		return 0;
+	}
+
+	std::string active_slot = PartitionManager.Get_Active_Slot_Display();
+	if (active_slot != "A" && active_slot != "B") {
+		gui_err("GSI Manager: the active A/B slot could not be verified.");
+		operation_end(1);
+		return 0;
+	}
+
+	// Mount /metadata read-only from the point of view of this action and refuse
+	// to flash while Virtual A/B snapshot or merge state is present/unknown.
+	auto snapshotManager = android::snapshot::SnapshotManager::NewForFirstStageMount();
+	if (!snapshotManager) {
+		gui_err("GSI Manager: SnapshotManager is unavailable; refusing to write System.");
+		operation_end(1);
+		return 0;
+	}
+	{
+		auto metadataMount = snapshotManager->EnsureMetadataMounted();
+		if (!metadataMount || !metadataMount->HasDevice()) {
+			gui_err("GSI Manager: /metadata could not be safely checked for OTA snapshots.");
+			operation_end(1);
+			return 0;
+		}
+		if (android::snapshot::SnapshotManager::IsSnapshotManagerNeeded() ||
+			snapshotManager->GetUpdateState() != android::snapshot::UpdateState::None) {
+			gui_err("GSI Manager: an OTA snapshot/merge is present or pending. Finish the OTA normally before replacing System.");
+			operation_end(1);
+			return 0;
+		}
+	}
+
+	if (!systemPart->Update_Size(false) || systemPart->Size == 0 ||
+		static_cast<unsigned long long>(image_size) > systemPart->Size) {
+		gui_err("GSI Manager: image exceeds the current System logical partition or its size could not be verified. No super resize will be attempted.");
+		operation_end(1);
+		return 0;
+	}
+
+	if (!systemPart->UnMount(true) || systemPart->Is_Mounted()) {
+		gui_err("GSI Manager: System could not be unmounted. No image was written.");
+		operation_end(1);
+		return 0;
+	}
+
+	// This path is restricted to /system and raw images. SHRP normally treats
+	// logical filesystems as BM_FILES; temporarily select its checked raw block
+	// writer and restore the original settings immediately afterwards.
+	DataManager::SetValue("tw_zip_location", path);
+	DataManager::SetValue("tw_file", filename);
+	DataManager::SetValue("tw_flash_partition", "/system;");
+	DataManager::SetValue("tw_flash_both_slots", 0);
+
+	bool originalCanFlash = systemPart->Can_Flash_Img;
+	Backup_Method_enum originalBackupMethod = systemPart->Backup_Method;
+	systemPart->Can_Flash_Img = true;
+	systemPart->Backup_Method = BM_DD;
+
+	funcRet flashState = FlashManager::funcInit("flashimage");
+	bool flashed = PartitionManager.Flash_Image(path, filename);
+	FlashManager::funcPost("flashimage", flashState);
+
+	systemPart->Can_Flash_Img = originalCanFlash;
+	systemPart->Backup_Method = originalBackupMethod;
+
+	if (flashed) {
+		gui_highlight("GSI Manager: raw System image written to active slot " + active_slot + ".");
+		op_status = 0;
+	} else {
+		gui_err("GSI Manager: the System image writer reported a failure.");
+	}
 	operation_end(op_status);
 	return 0;
 }
