@@ -244,6 +244,7 @@ GUIAction::GUIAction(xml_node<>* node)
 		ADD_ACTION(resize);
 		ADD_ACTION(changefilesystem);
 		ADD_ACTION(flashimage);
+		ADD_ACTION(gsiAnalyze);
 		ADD_ACTION(twcmd);
 		ADD_ACTION(setbootslot);
 		ADD_ACTION(installapp);
@@ -1916,6 +1917,72 @@ int GUIAction::flashimage(std::string arg __unused)
 	//SHRP
 	FlashManager::funcPost("flashimage", F);
 	//SHRP
+	operation_end(op_status);
+	return 0;
+}
+
+int GUIAction::gsiAnalyze(std::string arg __unused)
+{
+	int op_status = 0;
+	std::string path, filename;
+	DataManager::GetValue("gsi_image_path", path);
+	DataManager::GetValue("gsi_file", filename);
+
+	operation_start("Analyze GSI Image");
+	DataManager::SetValue("gsi_analysis", "Select a GSI .img file first.");
+	DataManager::SetValue("gsi_format", "Not analyzed");
+	DataManager::SetValue("gsi_image_size", "");
+
+	if (filename.empty()) {
+		DataManager::SetValue("gsi_analysis", "No image selected. Choose a .img file and analyze it again.");
+		op_status = 1;
+	} else {
+		std::string full_path = path;
+		if (!full_path.empty() && full_path.back() != '/')
+			full_path += "/";
+		full_path += filename;
+
+		std::ifstream image(full_path.c_str(), std::ios::in | std::ios::binary);
+		if (!image.is_open()) {
+			DataManager::SetValue("gsi_analysis", "Unable to open the selected image. Check storage access and the file name.");
+			op_status = 1;
+		} else {
+			image.seekg(0, std::ios::end);
+			std::streamoff image_size = image.tellg();
+			image.seekg(0, std::ios::beg);
+			unsigned char header[1084] = {};
+			image.read(reinterpret_cast<char*>(header), sizeof(header));
+			std::streamsize bytes_read = image.gcount();
+			image.close();
+
+			DataManager::SetValue("gsi_image_size",
+				image_size >= 0 ? std::to_string(static_cast<unsigned long long>(image_size)) + " bytes" : "Unknown");
+
+			if (bytes_read >= 4 &&
+				header[0] == 0x3a && header[1] == 0xff &&
+				header[2] == 0x26 && header[3] == 0xed) {
+				DataManager::SetValue("gsi_format", "Android sparse image");
+				DataManager::SetValue("gsi_analysis",
+					"Sparse image detected. The contained filesystem has not been inspected yet. No partitions were changed.");
+			} else if (bytes_read >= 1028 &&
+				header[1024] == 0xe2 && header[1025] == 0xe1 &&
+				header[1026] == 0xf5 && header[1027] == 0xe0) {
+				DataManager::SetValue("gsi_format", "EROFS (read-only filesystem)");
+				DataManager::SetValue("gsi_analysis",
+					"Raw EROFS image detected. EROFS-to-EXT4 conversion is not enabled yet. No partitions were changed.");
+			} else if (bytes_read >= 1082 &&
+				header[1080] == 0x53 && header[1081] == 0xef) {
+				DataManager::SetValue("gsi_format", "EXT4");
+				DataManager::SetValue("gsi_analysis",
+					"Raw EXT4 image detected. This screen only performs read-only identification; flashing is not enabled here.");
+			} else {
+				DataManager::SetValue("gsi_format", "Unknown / unsupported");
+				DataManager::SetValue("gsi_analysis",
+					"Filesystem signature not recognized. The image may be sparse, compressed, damaged, or use an unsupported layout. Nothing was flashed.");
+				op_status = 1;
+			}
+		}
+	}
 	operation_end(op_status);
 	return 0;
 }
