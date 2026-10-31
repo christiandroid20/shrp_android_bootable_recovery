@@ -1993,6 +1993,7 @@ int GUIAction::gsiAnalyze(std::string arg __unused)
 	}
 
 	// Read-only preflight of the mapped dynamic System target.
+	bool target_size_verified = false;
 	std::string targetInfo = "System logical partition: unavailable";
 	TWPartition* systemPart = PartitionManager.Find_Partition_By_Path("/system");
 	if (systemPart != nullptr) {
@@ -2000,12 +2001,16 @@ int GUIAction::gsiAnalyze(std::string arg __unused)
 		const std::string blockDevice = systemPart->Actual_Block_Device;
 		if (systemPart->Is_Super && systemPart->Is_Present &&
 			!blockDevice.empty() && access(blockDevice.c_str(), F_OK) == 0) {
-			systemPart->Update_Size(false);
-			targetInfo = "Slot: " + (slot.empty() ? std::string("unknown") : slot) +
+			target_size_verified = systemPart->Update_Size(false) && systemPart->Size > 0;
+			if (target_size_verified) {
+				targetInfo = "Slot: " + (slot.empty() ? std::string("unknown") : slot) +
 				" | System: " + systemPart->Current_File_System +
 				" | Logical size: " +
 				std::to_string(static_cast<unsigned long long>(systemPart->Size / (1024 * 1024))) +
 				" MiB | Mapper ready | super unchanged.";
+			} else {
+				targetInfo = "System mapper found, but its logical size could not be verified. Flashing is blocked.";
+			}
 		} else {
 			targetInfo = "System entry found, but its logical block device is not currently mapped. No partition was changed.";
 		}
@@ -2019,7 +2024,7 @@ int GUIAction::gsiAnalyze(std::string arg __unused)
 		systemPart->Actual_Block_Device.find("/dev/block/mapper/") == 0 &&
 		access(systemPart->Actual_Block_Device.c_str(), F_OK) == 0 &&
 		(systemPart->Get_Mount_Point() == "/system") &&
-		(systemPart->Size > 0) && image_bytes <= systemPart->Size &&
+		target_size_verified && (systemPart->Size > 0) && image_bytes <= systemPart->Size &&
 		(PartitionManager.Get_Active_Slot_Display() == "A" ||
 		 PartitionManager.Get_Active_Slot_Display() == "B")) {
 		flash_ready = true;
@@ -2077,7 +2082,7 @@ int GUIAction::gsiFlashSystem(std::string arg __unused)
 		header[2] == 0x26 && header[3] == 0xed;
 
 	if (image_size <= 0 || (!raw_erofs && !raw_ext4) || sparse) {
-		gui_err("GSI Manager: only verified raw EROFS or raw EXT4 images are enabled. Sparse, compressed, and unknown images are blocked.");
+		gui_err("GSI Manager: only raw EROFS or raw EXT4 images with a recognized filesystem signature are enabled. Sparse, compressed, and unknown images are blocked.");
 		operation_end(1);
 		return 0;
 	}
@@ -2085,9 +2090,7 @@ int GUIAction::gsiFlashSystem(std::string arg __unused)
 	TWPartition* systemPart = PartitionManager.Find_Partition_By_Path("/system");
 	if (systemPart == nullptr ||
 		!systemPart->Is_Super || !systemPart->Is_Present ||
-		systemPart->Get_Mount_Point() != "/system" ||
-		systemPart->Actual_Block_Device.find("/dev/block/mapper/") != 0 ||
-		access(systemPart->Actual_Block_Device.c_str(), F_OK) != 0) {
+		systemPart->Get_Mount_Point() != "/system") {
 		gui_err("GSI Manager: the active logical System mapper is not available. No write was attempted.");
 		operation_end(1);
 		return 0;
@@ -2124,6 +2127,8 @@ int GUIAction::gsiFlashSystem(std::string arg __unused)
 	}
 
 	if (!systemPart->Update_Size(false) || systemPart->Size == 0 ||
+		systemPart->Actual_Block_Device.find("/dev/block/mapper/") != 0 ||
+		access(systemPart->Actual_Block_Device.c_str(), F_OK) != 0 ||
 		static_cast<unsigned long long>(image_size) > systemPart->Size) {
 		gui_err("GSI Manager: image exceeds the current System logical partition or its size could not be verified. No super resize will be attempted.");
 		operation_end(1);
@@ -2157,7 +2162,7 @@ int GUIAction::gsiFlashSystem(std::string arg __unused)
 	systemPart->Backup_Method = originalBackupMethod;
 
 	if (flashed) {
-		gui_highlight("GSI Manager: raw System image written to active slot " + active_slot + ".");
+		gui_highlight("gsi_flash_done=Raw System image written to the active slot.");
 		op_status = 0;
 	} else {
 		gui_err("GSI Manager: the System image writer reported a failure.");
