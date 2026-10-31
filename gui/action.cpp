@@ -2001,7 +2001,7 @@ int GUIAction::gsiAnalyze(std::string arg __unused)
 		const std::string blockDevice = systemPart->Actual_Block_Device;
 		if (systemPart->Is_Super && systemPart->Is_Present &&
 			!blockDevice.empty() && access(blockDevice.c_str(), F_OK) == 0) {
-			target_size_verified = systemPart->Update_Size(false) && systemPart->Size > 0;
+			target_size_verified = systemPart->Find_Partition_Size() && systemPart->Size > 0;
 			if (target_size_verified) {
 				targetInfo = "Slot: " + (slot.empty() ? std::string("unknown") : slot) +
 				" | System: " + systemPart->Current_File_System +
@@ -2126,7 +2126,7 @@ int GUIAction::gsiFlashSystem(std::string arg __unused)
 		}
 	}
 
-	if (!systemPart->Update_Size(false) || systemPart->Size == 0 ||
+	if (!systemPart->Find_Partition_Size() || systemPart->Size == 0 ||
 		systemPart->Actual_Block_Device.find("/dev/block/mapper/") != 0 ||
 		access(systemPart->Actual_Block_Device.c_str(), F_OK) != 0 ||
 		static_cast<unsigned long long>(image_size) > systemPart->Size) {
