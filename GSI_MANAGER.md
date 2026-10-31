@@ -16,10 +16,16 @@ It reports the image size and whether the signature was recognized. It only read
 
 Sparse images are identified as sparse containers only; their contained filesystem is not yet inspected. Compressed images and unknown formats are reported as unsupported.
 
+## Build prerequisites
+
+The matching A35 feature tree enables `TW_INCLUDE_GSI_MANAGER := true`. The SHRP 12.1 manifest's original EROFS tools are older than the required recovery/xattr feature set, so the separate builder feature workflow pins `external/erofs-utils` to AOSP commit `7293c06aaf1a792ff4fd94b1baa5a2194406c5a5` (2025-01-19). That revision defines `fsck.erofs.recovery` and supports `--xattrs` export using `lsetxattr`. The feature workflow checks these source capabilities before building. This has not yet been compiled or tested on the A35.
+
+The new build path is deliberately isolated in `feature/gsi-manager-build-20261031` and remains manual until the complete installer/converter is ready. Do not select this diagnostic/preflight build for normal use.
+
 ## Planned milestones
 
 1. **GSI image preflight** — current milestone, read-only only.
-2. **EROFS extraction and EXT4 image creation** — the core now has an opt-in build switch, `TW_INCLUDE_GSI_MANAGER=true`, which requests `fsck.erofs.recovery`, `mke2fs.recovery`, `e2fsdroid.recovery` and `mke2fs.conf.recovery`. The converter must require `fsck.erofs --xattrs`, preserve ownership/permissions as root, verify SELinux labels and output metadata, and be proven on host-generated test images before any target write path exists.
+2. **EROFS extraction and EXT4 image creation** — the core now has an opt-in build switch, `TW_INCLUDE_GSI_MANAGER=true`, which requests `fsck.erofs.recovery`, `mke2fs.recovery`, `e2fsdroid.recovery` and `mke2fs.conf.recovery`. The converter must require `fsck.erofs --extract=<staging-dir> --preserve --xattrs`, preserve ownership/permissions as root, and prove that every security xattr including `security.selinux` survived extraction. It must also validate the EXT4 image and its labels before any target write path exists.
 3. **Dynamic partition planning** — read current LP metadata, active slot, group limits, free extents, snapshot/merge state and target partition size. No automatic resizing until all these conditions can be proven safe.
 4. **GApps ZIP compatibility** — inspect the user-provided ZIP for Android API level, ARM64 support and package metadata; then pass a compatible package to the existing ZIP installer. No Magisk module installation or bundled GApps binaries.
 5. **Write/flash stage** — separate explicit confirmation, verified target mapping and size checks. System replacement may overwrite the existing logical `system` contents. It must never format or wipe `/data`, userdata, metadata, vendor, or other personal partitions. If metadata, snapshot state, free space, or filesystem metadata cannot be validated, the action must abort without writing.
