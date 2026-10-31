@@ -892,7 +892,7 @@ ifeq ($(TW_INCLUDE_GSI_MANAGER),true)
         $(error TW_INCLUDE_GSI_MANAGER requires external/erofs-utils)
     endif
     ifneq ($(wildcard external/e2fsprogs/Android.bp),)
-        TWRP_REQUIRED_MODULES += mke2fs.recovery e2fsdroid.recovery
+        TWRP_REQUIRED_MODULES += mke2fs e2fsdroid
     else
         $(error TW_INCLUDE_GSI_MANAGER requires external/e2fsprogs)
     endif
