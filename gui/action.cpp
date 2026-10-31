@@ -1993,12 +1993,11 @@ int GUIAction::gsiAnalyze(std::string arg __unused)
 		if (systemPart->Is_Super && systemPart->Is_Present &&
 			!blockDevice.empty() && access(blockDevice.c_str(), F_OK) == 0) {
 			systemPart->Update_Size(false);
-			targetInfo = "Active slot: " + (slot.empty() ? std::string("unknown") : slot) +
-				" | System FS: " + systemPart->Current_File_System +
+			targetInfo = "Slot: " + (slot.empty() ? std::string("unknown") : slot) +
+				" | System: " + systemPart->Current_File_System +
 				" | Logical size: " +
-				std::to_string(static_cast<unsigned long long>(systemPart->Size)) +
-				" bytes | Device: " + blockDevice +
-				" | No super metadata has been modified.";
+				std::to_string(static_cast<unsigned long long>(systemPart->Size / (1024 * 1024))) +
+				" MiB | Mapper ready | super unchanged.";
 		} else {
 			targetInfo = "System entry found, but its logical block device is not currently mapped. No partition was changed.";
 		}
