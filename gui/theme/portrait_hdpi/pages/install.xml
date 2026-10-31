@@ -457,8 +457,12 @@
 				<placement x="%c_hawk_base_column%" y="%rPos79%"/>
 				<text>Image size: %gsi_image_size%</text>
 			</text>
+			<text style="simpleText">
+				<placement x="%c_hawk_base_column%" y="%rPos85%" w="%c_console_width%" h="120"/>
+				<text>Target: %gsi_target_info%</text>
+			</text>
 			<textbox>
-				<placement x="%c_hawk_base_column%" y="%rPos85%" w="%c_console_width%" h="250"/>
+				<placement x="%c_hawk_base_column%" y="%rPos91%" w="%c_console_width%" h="210"/>
 				<text>%gsi_analysis%</text>
 			</textbox>
 			<button>
