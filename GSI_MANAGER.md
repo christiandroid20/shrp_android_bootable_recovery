@@ -12,7 +12,7 @@ This milestone adds a GSI Manager entry to Advanced and a dedicated image picker
 - Raw EROFS superblock magic at offset 1024.
 - Raw EXT4 filesystem magic at offset 1080.
 
-It reports the image size and whether the signature was recognized. It only reads the user-selected image; it does not flash, mount, format, extract, resize, rewrite, or delete anything. It never writes to or formats `/data`, and it does not modify `super` metadata.
+It reports the image size and recognized signature. It also shows the currently mapped System logical partition's active slot, filesystem type and size as a read-only target preflight. It does not yet calculate free extents in the LP group. The action does not flash, mount, format, extract, resize, rewrite, or delete anything. It never writes to or formats `/data`, and it does not modify `super` metadata.
 
 Sparse images are identified as sparse containers only; their contained filesystem is not yet inspected. Compressed images and unknown formats are reported as unsupported.
 
@@ -24,8 +24,8 @@ The new build path is deliberately isolated in `feature/gsi-manager-build-202610
 
 ## Planned milestones
 
-1. **GSI image preflight** — current milestone, read-only only.
-2. **EROFS extraction and EXT4 image creation** — the core now has an opt-in build switch, `TW_INCLUDE_GSI_MANAGER=true`, which requests `fsck.erofs.recovery`, `mke2fs.recovery`, `e2fsdroid.recovery` and `mke2fs.conf.recovery`. The converter must require `fsck.erofs --extract=<staging-dir> --preserve --xattrs`, preserve ownership/permissions as root, and prove that every security xattr including `security.selinux` survived extraction. It must also validate the EXT4 image and its labels before any target write path exists.
+1. **GSI image preflight** — current milestone, read-only only. Shows the active System target, but does not yet determine LP group free space.
+2. **EROFS extraction and EXT4 image creation** — the core has an opt-in build switch, `TW_INCLUDE_GSI_MANAGER=true`, which requests `fsck.erofs.recovery`, `mke2fs.recovery` and `e2fsdroid.recovery`; the base recovery already includes its `mke2fs.conf` module. The converter must require `fsck.erofs --extract=<staging-dir> --preserve --xattrs`, preserve ownership/permissions as root, and prove that every security xattr including `security.selinux` survived extraction. It must also validate the EXT4 image and its labels before any target write path exists.
 3. **Dynamic partition planning** — read current LP metadata, active slot, group limits, free extents, snapshot/merge state and target partition size. No automatic resizing until all these conditions can be proven safe.
 4. **GApps ZIP compatibility** — inspect the user-provided ZIP for Android API level, ARM64 support and package metadata; then pass a compatible package to the existing ZIP installer. No Magisk module installation or bundled GApps binaries.
 5. **Write/flash stage** — separate explicit confirmation, verified target mapping and size checks. System replacement may overwrite the existing logical `system` contents. It must never format or wipe `/data`, userdata, metadata, vendor, or other personal partitions. If metadata, snapshot state, free space, or filesystem metadata cannot be validated, the action must abort without writing.
