@@ -480,6 +480,62 @@
 				<touch key="back"/>
 				<action function="page">advanced</action>
 			</action>
+
+			<button>
+				<condition var1="gsi_flash_ready" var2="1"/>
+				<placement x="500" y="%rndPos105%" w="330" h="100"/>
+				<fill color="%subBackgroundColor%"/>
+				<text>Flash raw image to System</text>
+				<action function="page">gsi_flash_confirm</action>
+			</button>
+		</page>
+
+		<page name="gsi_flash_confirm">
+			<template name="navCommon"/>
+			<template name="c_status_bar"/>
+			<text style="pageTitle">
+				<placement x="%c_hawk_base_column%" y="%rPos3%"/>
+				<text>Replace active System slot?</text>
+			</text>
+			<textbox>
+				<placement x="%c_hawk_base_column%" y="%rPos18%" w="%c_console_width%" h="760"/>
+				<text>WARNING: This writes the selected raw image over the current logical System partition in the active A/B slot. The previous System contents will be replaced. It does not resize or rewrite super metadata and does not format or write /data, userdata, metadata, vendor, product, odm, or the inactive slot. Only raw EROFS and EXT4 images are accepted; sparse images are blocked. The action will abort if /metadata cannot be checked or if an OTA snapshot/merge is pending.</text>
+			</textbox>
+			<text style="simpleText">
+				<placement x="%c_hawk_base_column%" y="%rPos68%"/>
+				<text>Image: %gsi_file% | Format: %gsi_format% | Size: %gsi_image_size%</text>
+			</text>
+			<text style="simpleText">
+				<placement x="%c_hawk_base_column%" y="%rPos74%"/>
+				<text>%gsi_target_info%</text>
+			</text>
+			<button style="cnfrmBtn">
+				<placement x="700" y="%rndPos115%" w="310" h="110"/>
+				<fill color="%subBackgroundColor%"/>
+				<text>Replace System</text>
+				<actions>
+					<action function="set">tw_back=gsi_flash_confirm</action>
+					<action function="set">tw_action=gsiFlashSystem</action>
+					<action function="set">tw_has_action2=0</action>
+					<action function="set">tw_action_text1=Writing GSI to System...</action>
+					<action function="set">tw_action_text2=Do not interrupt power</action>
+					<action function="set">tw_complete_text1=System image write finished</action>
+					<action function="overlay"/>
+					<action function="page">action_page</action>
+				</actions>
+				<action function="gsiFlashSystem"/>
+			</button>
+			<button style="cnfrmBtn">
+				<placement x="360" y="%rndPos115%" w="310" h="110"/>
+				<fill color="%tranparent%"/>
+				<text>Cancel</text>
+				<action function="page">gsi_manager</action>
+			</button>
+			<action>
+				<touch key="back"/>
+				<action function="page">gsi_manager</action>
+			</action>
+		</page>
 		</page>
 
 	</pages>
