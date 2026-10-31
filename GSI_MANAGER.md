@@ -12,7 +12,7 @@ This milestone adds a GSI Manager entry to Advanced and a dedicated image picker
 - Raw EROFS superblock magic at offset 1024.
 - Raw EXT4 filesystem magic at offset 1080.
 
-It reports the image size and whether the signature was recognized. It does not flash, mount, format, extract, resize, rewrite, or delete anything. It does not access `/data` or modify `super`.
+It reports the image size and whether the signature was recognized. It only reads the user-selected image; it does not flash, mount, format, extract, resize, rewrite, or delete anything. It never writes to or formats `/data`, and it does not modify `super` metadata.
 
 Sparse images are identified as sparse containers only; their contained filesystem is not yet inspected. Compressed images and unknown formats are reported as unsupported.
 
