@@ -69,6 +69,7 @@ void initSHRPVars(InfoManager* mConst, InfoManager* mData, InfoManager* mPersist
 	mData->SetValue("gsi_format", "Not analyzed");
 	mData->SetValue("gsi_image_size", "");
 	mData->SetValue("gsi_analysis", "Choose a .img file, then tap the check button. This screen does not flash or modify partitions.");
+	mData->SetValue("gsi_target_info", "System logical partition has not been inspected.");
 	mData->SetValue("isThemeFile", "0");
 	mData->SetValue("chFolder", "0");
 	//SHRP_PERSISTED_VARS
