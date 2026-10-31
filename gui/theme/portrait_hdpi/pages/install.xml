@@ -536,7 +536,6 @@
 				<action function="page">gsi_manager</action>
 			</action>
 		</page>
-		</page>
 
 	</pages>
 </recovery>
