@@ -1983,6 +1983,28 @@ int GUIAction::gsiAnalyze(std::string arg __unused)
 			}
 		}
 	}
+
+	// Read-only preflight of the mapped dynamic System target.
+	std::string targetInfo = "System logical partition: unavailable";
+	TWPartition* systemPart = PartitionManager.Find_Partition_By_Path("/system");
+	if (systemPart != nullptr) {
+		const std::string slot = PartitionManager.Get_Active_Slot_Display();
+		const std::string blockDevice = systemPart->Actual_Block_Device;
+		if (systemPart->Is_Super && systemPart->Is_Present &&
+			!blockDevice.empty() && access(blockDevice.c_str(), F_OK) == 0) {
+			systemPart->Update_Size(false);
+			targetInfo = "Active slot: " + (slot.empty() ? std::string("unknown") : slot) +
+				" | System FS: " + systemPart->Current_File_System +
+				" | Logical size: " +
+				std::to_string(static_cast<unsigned long long>(systemPart->Size)) +
+				" bytes | Device: " + blockDevice +
+				" | No super metadata has been modified.";
+		} else {
+			targetInfo = "System entry found, but its logical block device is not currently mapped. No partition was changed.";
+		}
+	}
+	DataManager::SetValue("gsi_target_info", targetInfo);
+
 	operation_end(op_status);
 	return 0;
 }
