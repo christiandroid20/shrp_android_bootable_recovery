@@ -19,7 +19,7 @@ Sparse images are identified as sparse containers only; their contained filesyst
 ## Planned milestones
 
 1. **GSI image preflight** — current milestone, read-only only.
-2. **EROFS extraction and EXT4 image creation** — add and verify recovery-buildable EROFS extraction, ext4 formatting/population, xattr and SELinux label preservation. Must be proven on host-generated test images before any target write path exists.
+2. **EROFS extraction and EXT4 image creation** — the core now has an opt-in build switch, `TW_INCLUDE_GSI_MANAGER=true`, which requests `fsck.erofs.recovery`, `mke2fs.recovery`, `e2fsdroid.recovery` and `mke2fs.conf.recovery`. The converter must require `fsck.erofs --xattrs`, preserve ownership/permissions as root, verify SELinux labels and output metadata, and be proven on host-generated test images before any target write path exists.
 3. **Dynamic partition planning** — read current LP metadata, active slot, group limits, free extents, snapshot/merge state and target partition size. No automatic resizing until all these conditions can be proven safe.
 4. **GApps ZIP compatibility** — inspect the user-provided ZIP for Android API level, ARM64 support and package metadata; then pass a compatible package to the existing ZIP installer. No Magisk module installation or bundled GApps binaries.
 5. **Write/flash stage** — separate explicit confirmation, verified target mapping and size checks. System replacement may overwrite the existing logical `system` contents. It must never format or wipe `/data`, userdata, metadata, vendor, or other personal partitions. If metadata, snapshot state, free space, or filesystem metadata cannot be validated, the action must abort without writing.
