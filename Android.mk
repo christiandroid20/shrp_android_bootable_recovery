@@ -896,11 +896,7 @@ ifeq ($(TW_INCLUDE_GSI_MANAGER),true)
     else
         $(error TW_INCLUDE_GSI_MANAGER requires external/e2fsprogs)
     endif
-    ifneq ($(wildcard system/extras/ext4_utils/Android.bp),)
-        TWRP_REQUIRED_MODULES += mke2fs.conf.recovery
-    else
-        $(error TW_INCLUDE_GSI_MANAGER requires system/extras/ext4_utils)
-    endif
+    # mke2fs.conf is already part of TWRP_REQUIRED_MODULES above.
 endif
 
 LOCAL_REQUIRED_MODULES += $(TWRP_REQUIRED_MODULES)
