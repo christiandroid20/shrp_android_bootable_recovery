@@ -883,6 +883,26 @@ ifeq ($(BOARD_CACHEIMAGE_PARTITION_SIZE),)
     TWRP_REQUIRED_MODULES += recovery-persist recovery-refresh
 endif
 
+# Optional dependencies for the GSI Manager's EROFS -> EXT4 pipeline.
+# Keep this opt-in so existing recovery builds do not grow unexpectedly.
+ifeq ($(TW_INCLUDE_GSI_MANAGER),true)
+    ifneq ($(wildcard external/erofs-utils/Android.bp),)
+        TWRP_REQUIRED_MODULES += fsck.erofs.recovery
+    else
+        $(error TW_INCLUDE_GSI_MANAGER requires external/erofs-utils)
+    endif
+    ifneq ($(wildcard external/e2fsprogs/Android.bp),)
+        TWRP_REQUIRED_MODULES += mke2fs.recovery e2fsdroid.recovery
+    else
+        $(error TW_INCLUDE_GSI_MANAGER requires external/e2fsprogs)
+    endif
+    ifneq ($(wildcard system/extras/ext4_utils/Android.bp),)
+        TWRP_REQUIRED_MODULES += mke2fs.conf.recovery
+    else
+        $(error TW_INCLUDE_GSI_MANAGER requires system/extras/ext4_utils)
+    endif
+endif
+
 LOCAL_REQUIRED_MODULES += $(TWRP_REQUIRED_MODULES)
 
 include $(BUILD_EXECUTABLE)
