@@ -241,6 +241,24 @@
 				</actions>
 			</button>
 
+
+			<!-- GSI Manager: read-only image preflight -->
+			<button>
+				<condition var1="dashboardSubTintEnabled" var2="1"/>
+				<placement x="99" y="%rPos61%"/>
+				<image resource="dashboardBackground"/>
+			</button>
+			<button>
+				<placement x="99" y="%rPos61%"/>
+				<image resource="c_advanced_shrp"/>
+				<action function="page">gsi_manager</action>
+			</button>
+			<button style="dashboardText">
+				<placement x="69" y="%rPos71%" w="205" h="70"/>
+				<text>{@gsi_manager=GSI Manager}</text>
+				<action function="page">gsi_manager</action>
+			</button>
+
 			<action>
 				<touch key="home"/>
 				<action function="page">c_refresh</action>
