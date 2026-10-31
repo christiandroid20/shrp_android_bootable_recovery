@@ -62,6 +62,13 @@ void initSHRPVars(InfoManager* mConst, InfoManager* mData, InfoManager* mPersist
 	mData->SetValue("shrp_zipFolderName", "");
 	mData->SetValue("shrpUnzipFolder", "");
 	mData->SetValue("canBeUnzip", "0");
+	// GSI Manager — read-only image preflight defaults.
+	mData->SetValue("gsi_image_path", "/sdcard");
+	mData->SetValue("gsi_filename", "");
+	mData->SetValue("gsi_file", "");
+	mData->SetValue("gsi_format", "Not analyzed");
+	mData->SetValue("gsi_image_size", "");
+	mData->SetValue("gsi_analysis", "Choose a .img file, then tap the check button. This screen does not flash or modify partitions.");
 	mData->SetValue("isThemeFile", "0");
 	mData->SetValue("chFolder", "0");
 	//SHRP_PERSISTED_VARS
